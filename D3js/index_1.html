@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang='ja'>
+<head>
+    <meta charset="utf-8">
+    <title>D3.js</title>
+</head>
+<body>
+    <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+    <script>
+        var dataset = [20, 55, 80, 30, 90];
+ 
+        var w = 900;
+        var h = 200;
+ 
+        var svg = d3.select("body").append("svg").attr({width:w, height:h});
+ 
+        svg.selectAll("circle")
+            .data(dataset)
+            .enter()
+            .append("circle")
+            .attr({
+                cx: function(d, i) { return 50 + ( i * 100); },
+                cy: h / 2,
+                r: 0,
+                fill: "red"
+            })
+            .transition()
+            .delay(function(d, i) {
+                return i * 300;
+            })
+            .duration(1000)
+            .ease("bounce")
+            .attr({
+                r: function(d) { return d; }
+            });
+    </script>
+</body>
+</html>
