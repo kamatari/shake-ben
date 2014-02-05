@@ -7,7 +7,7 @@
 <body>
     <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
     <script>
-        var dataset = [20, 55, 80, 30, 90];
+        var dataset = [20, 13, 40, 20, 25];
  
         var w = 900;
         var h = 200;
@@ -22,7 +22,7 @@
                 cx: function(d, i) { return 50 + ( i * 100); },
                 cy: h / 2,
                 r: 0,
-                fill: "red"
+                fill: "yellow"
             })
             .transition()
             .delay(function(d, i) {
