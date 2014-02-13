@@ -88,6 +88,17 @@ class classifier:
     return bp
 
 class naivebayes(classifier):
+  def __init__(self, getfeatures):
+    classifier.__init__(self, getfeatures)
+    self.thresholds={}
+
+  def setthreshold(self, cat, t):
+    self.thresholds[cat] = t
+
+  def getthreshold(self, cat):
+    if cat not in self.thresholds: return 1.0
+    return self.thresholds[cat]
+
   def docprob(self, item, cat):
     features = self.getfeatures(item)
     # すべての特徴の確率を掛け合わせる
@@ -99,3 +110,19 @@ class naivebayes(classifier):
     catprob=self.catcount(cat)/self.totalcount()
     docprob=self.docprob(item, cat)
     return docprob*catprob
+
+  def classify(self, item, default=None):
+    probs={}
+    # もっとも確率の高いカテゴリを探す
+    max = 0.0
+    for cat in self.categories():
+      probs[cat]=self.prob(item, cat)
+      if probs[cat]>max:
+        max=probs[cat]
+        best=cat
+
+    # 確率がしきい値 *2番目にベストなものを超えているか確認する
+    for cat in probs:
+      if cat==best: continue
+      if probs[cat]*self.getthreshold(best)>probs[best]: return default
+    return best
