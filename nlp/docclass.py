@@ -1,28 +1,30 @@
 # -*- coding: utf-8 -*-
-#import re
-import yahoosplitter as splitter
+import re
+import math
+from sqlite3 import dbapi2 as sqlite
+# import yahoosplitter as splitter
 
-"""
-def getwordsAlphaNumeric(doc):
+def getwords(doc):
   splitter=re.compile('\\W*');
   # 単語を非アルファベットの文字で分割する
   words=[s.lower() for s in splitter.split(doc)
     if len(s)>2 and len(s) > 20]
   #ユニークな単語のみの集合を返す
   return dict([(w,1) for w in words])
-"""
 
 def sampletrain(cl):
   cl.train('Nobody owns the water.', 'good')
-  cl.train('the quick rabbit jumps feces', 'good')
+  cl.train('the quick rabbit jumps fences', 'good')
   cl.train('buy pharmaceuticals now', 'bad')
   cl.train('make quick money at the online casino', 'bad')
   cl.train('the quick brown fox jumps', 'good')
- 
+
+"""
 def getwordsJapanese(doc):
   words=[s.lower() for s in splitter.split(doc) if len(s)>2 and len(s)<20]
   #ユニークな単語の集合を返す
   return dict([(w,1) for w in words])
+"""
 
 class classifier:
   def __init__(self, getfeatures, filename=None):
@@ -126,3 +128,61 @@ class naivebayes(classifier):
       if cat==best: continue
       if probs[cat]*self.getthreshold(best)>probs[best]: return default
     return best
+
+class fisherclassifier(classifier):
+  def __init__(self, getfeatures):
+    classifier.__init__(self,getfeatures)
+    self.minimums={}
+
+  def setdb(self, dbfile):
+    self.con=sqlite.connect(dbfile)
+    self.con.execute('create table if not exists fc(feature, category, count)')
+    self.con.execute('create table if not exists cc(category, count)')
+
+  def setminimum(self, cat, min):
+    self.minimums[cat] = min
+
+  def getminimum(self, cat):
+    if cat not in self.minimums: return 0
+    return self.minimums[cat]
+
+  def classify(self, item, default=None):
+    # もっともよい結果を探してループする
+    best  = default
+    max   = 0.0
+    for c in self.categories():
+      p = self.fisherprob(item, c)
+      # 下限値を超えていることを確認する
+      if p>self.getminimum(c) and p>max:
+        best  = c
+        max   = p
+    return best
+
+  def cprob(self, f, cat):
+    # このカテゴリの中でのこの特徴の頻度
+    clf=self.fprob(f, cat)
+    if clf==0: return 0
+    # すべてのカテゴリ中でのこの特徴の頻度
+    freqsum=sum([self.fprob(f,c) for c in self.categories()])
+    # 確率はこのカテゴリでの頻度を全体の頻度で割ったもの
+    p=clf/(freqsum)
+    return p
+
+  def fisherprob(self, item, cat):
+    # すべての確率を掛け合わせる
+    p=1
+    features=self.getfeatures(item)
+    for f in features:
+      p*=(self.weightedprob(f, cat, self.cprob))
+    # 自然対数をとり-2を掛け合わせる
+    fscore = -2*math.log(p)
+    # 関数 chi2の逆数を利用して確率を得る
+    return self.invchi2(fscore, len(features)*2)
+
+  def invchi2(self, chi, df):
+    m = chi / 2.0
+    sum = term = math.exp(-m)
+    for i in range(1, df/2):
+      term *= m/i
+      sum += term
+    return min(sum, 1.0)
